@@ -1,4 +1,4 @@
-# RETAIL SALES ANALYSIS USING SQL
+# RETAIL SALES ANALYSIS
 
 # Introduction
 
@@ -17,6 +17,8 @@ The goal of this analysis was to uncover actionable business insights from retai
 
 - **SQL:** The backbone of this analysis, enabling me to query the retail sales database, analyze customer purchasing behavior, and uncover actionable business insights.
 - **PostgreSQL:** The chosen database management system, ideal for storing and analyzing transactional retail data efficiently.
+
+- **Power BI:** Used to create interactive dashboards and visualizations, helping transform SQL insights into clear, data-driven stories through charts, KPIs, and customer trend analysis.
 - **Visual Studio Code:** My go-to environment for writing, organizing, and executing SQL queries throughout the analysis process.
 - **Git & GitHub:** Essential for version control, project tracking, and sharing SQL scripts and analysis in a structured and collaborative manner.
 
@@ -51,24 +53,10 @@ The dataset used for this project was sourced from Kaggle.
 
 To understand how age and gender influence customer purchasing behavior, I segmented spending by gender and age groups across product categories using conditional aggregation (CASE WHEN) and grouped the results by gender and product category. This analysis was designed to identify demographic spending patterns and uncover category preferences among different customer groups.
 
-```sql
- SELECT
-    gender,
-    product_category,
-    SUM(CASE WHEN age BETWEEN 0 AND 24 THEN total_amount ELSE 0 END) AS young_adult_spend,
-    SUM(CASE WHEN age BETWEEN 25 AND 34 THEN total_amount ELSE 0 END) AS adult_spend,
-    SUM(CASE WHEN age BETWEEN 35 AND 44 THEN total_amount ELSE 0 END) AS midage_adult_spend,
-    SUM(CASE WHEN age BETWEEN 45 AND 54 THEN total_amount ELSE 0 END) AS mature_adult_spend,
-    SUM(CASE WHEN age >55 THEN total_amount ELSE 0 END) AS senior_spend
-    
+[view sql query](/sql_files/1_Customer_Behavior_Demographics.sql)
 
-FROM 
-    retail_sales
 
-GROUP BY
-    gender,
-    product_category
-```
+![purchasing behavior](/How%20Does%20Customer%20Age%20&%20Gender%20Influence%20Purchasing%20Behavior.png)
 #### Insights
 
 Purchasing behavior varied across age and gender segments. Female customers aged 25–44 spent most on Clothing (19,975) and Beauty (18,080), while male customers showed stronger spending on Clothing at ages 25–34 (21,665) and Electronics among seniors 55+ (21,770). Electronics spending generally increased with age among men, while Clothing remained a consistently high-performing category across most demographic groups.
@@ -79,18 +67,10 @@ Purchasing behavior varied across age and gender segments. Female customers aged
 
 To determine which product categories hold the highest appeal among customers, I analyzed product performance by measuring transaction frequency, total units sold, and revenue generated across categories. The query groups sales data by product category and evaluates customer demand using purchase count (sales_count), quantity sold, and total revenue. This helps identify the most popular and commercially valuable product categories.
 
-```sql
-SELECT
-    product_category,
-    COUNT(*) AS sales_count,
-    SUM(quantity) AS quantity_sold,
-    SUM(total_amount) AS total_revenue
-FROM 
-    retail_sales
-GROUP BY
-    product_category
-ORDER BY sales_count DESC;
-```
+[view sql query](/sql_files/2_Product_Sales_Performance.sql)
+
+[Popular Product Category](/Which%20Product%20Category%20Has%20The%20Highest%20Appeal%20Among%20Customers.jpg)
+
 
 #### Insights
 Clothing was the most frequently purchased category, recording the highest sales count (351) and units sold (894), indicating strong customer appeal. However, Electronics generated the highest revenue (156,905), suggesting customers spent more per transaction on electronic products. Beauty showed comparatively lower demand across transactions, quantity sold, and revenue.
@@ -138,22 +118,9 @@ Across all categories, the majority of purchases (59–61%) occurred in the lowe
 
 To identify seasonal sales patterns across product categories, I analyzed quarterly sales performance by extracting the quarter from each transaction date and aggregating total revenue by product category. Using conditional aggregation (CASE WHEN), the query calculates quarterly revenue for Electronics, Clothing, and Beauty, alongside overall sales. This allows for comparison of category performance over time and helps uncover seasonal trends or shifts in customer demand.
 
-```sql
-WITH total_product_quarterly_sales AS(
-    SELECT
-        EXTRACT(QUARTER FROM transaction_date) AS quarter,
-        SUM(CASE WHEN product_category='Electronics' THEN total_amount ELSE 0 END) AS electronic_total,
-        SUM(CASE WHEN product_category='Clothing' THEN total_amount ELSE 0 END)AS clothing_total,
-        SUM(CASE WHEN product_category='Beauty' THEN total_amount ELSE 0 END) AS beauty_total,
-        SUM(total_amount) AS total_sales
-    FROM
-        retail_sales
-    GROUP BY
-        quarter
-)
-SELECT*
-FROM total_product_quarterly_sales;
-```
+[view sql query](/sql_files/3_Seasonal_Analysis.sql)
+![view sales patterns](/Are%20There%20Discernible%20Patterns%20In%20Sales%20Across%20Different%20Time%20Periods.jpg)
+
 
 #### Insights
 
@@ -163,38 +130,9 @@ Sales showed clear seasonal variation, with Quarter 4 generating the highest rev
 
 To identify purchasing behaviors based on the number of items bought per transaction, I categorized purchases into three basket types: Single Item, Small Basket (2–3 items), and Bulk Purchase (4+ items). The query analyzes these behaviors across product categories and quarters, measuring transaction frequency, average spending, average price per unit, and total revenue. This helps uncover how basket size influences customer spending patterns and product purchasing behavior over time.
 
-``` sql
-SELECT
-    EXTRACT(QUARTER FROM transaction_date) AS quarter,
+[view sql query](/sql_files/3_Seasonal_Analysis.sql)
+![Behavior Based On Items Bought Per Transaction](/Distinct%20Purchasing%20Behavior%20Based%20on%20Number%20of%20Items%20Per%20Transaction.png)
 
-    CASE
-        WHEN quantity = 1 THEN 'Single Item'
-        WHEN quantity BETWEEN 2 AND 3 THEN 'Small Basket'
-        ELSE 'Bulk Purchase'
-    END AS purchase_behavior,
-
-    product_category,
-
-    COUNT(*) AS transaction_count,
-
-    ROUND(AVG(total_amount), 2) AS avg_transaction_spend,
-
-    ROUND(AVG(price_per_unit), 2) AS avg_price_per_unit,
-
-    SUM(total_amount) AS total_revenue
-
-FROM retail_sales
-
-GROUP BY
-    quarter,
-    purchase_behavior,
-    product_category
-
-ORDER BY
-    quarter,
-    purchase_behavior,
-    total_revenue DESC;
-```
 
 #### Insights
 
@@ -247,37 +185,9 @@ From the results we can see that the super customers buy items in bulk as compar
 
 To determine whether customers can be grouped into distinct spending segments, I first calculated each customer’s total lifetime spending by aggregating all transaction values. Customers were then categorized into four spending tiers (Low, Mid, High Value, and VIP Customers) based on predefined spending thresholds. Finally, the query counts the number of customers in each segment, helping identify the distribution of customer value and enabling more targeted marketing, retention, and loyalty strategies.
 
-```sql
-WITH customer_spend AS(
-    SELECT 
-        customer_id,
-        SUM(total_amount) AS total_customer_spend
-    FROM retail_sales
-    GROUP BY
-        customer_id
-),
+[view sql query](/sql_files/4_Customer_Segmentation_and_CRM.sql)
+![view customer segments](/Customer%20Spending%20Segments.png)
 
- Customer_seg AS(
-    SELECT
-        customer_id,
-        CASE
-            WHEN total_customer_spend>=1500 THEN 'VIP_Customers'
-            WHEN total_customer_spend BETWEEN 1000 AND 1499 THEN  'High_Value_Customers'
-            WHEN total_customer_spend Between 500 and 999 THEN 'Mid_Customers'
-            WHEN total_customer_spend < 500 THEN 'Low_Value_Customers'
-            ELSE ''
-        END AS Customer_Value_Category
-    FROM customer_spend
-)
-
-SELECT
-    COUNT(CASE WHEN Customer_Value_Category = 'VIP_Customers' THEN customer_id END) AS VIP_count,
-    COUNT(CASE WHEN Customer_Value_Category = 'High_Value_Customers' THEN customer_id END) AS High_Value_Count,
-    COUNT(CASE WHEN Customer_Value_Category = 'Mid_Customers' THEN customer_id END) AS Mid_Value_Count,
-    COUNT(CASE WHEN Customer_Value_Category = 'Low_Value_Customers' THEN customer_id END) AS Low_Value_Count
-FROM
-    customer_seg;
-```
 
 #### Insights
 
@@ -287,31 +197,10 @@ Customer spending is highly concentrated among lower-value segments, with 650 cu
 
 To determine which customer segments contribute the most revenue, I segmented customers by both age group and gender using conditional aggregation (CASE WHEN). The query calculates the percentage contribution of each age segment to total spending within each gender group, allowing for comparison of revenue-driving customer demographics. This helps identify the most valuable customer segments and supports targeted marketing and customer retention strategies.
 
-``` sql
-WITH customer_spend AS(
-    SELECT
-        gender,
-        SUM(CASE WHEN age BETWEEN 0 AND 24 THEN total_amount ELSE 0 END) AS total_teen_spend,
-        SUM(CASE WHEN age BETWEEN 25 AND 34 THEN total_amount ELSE 0 END) AS total_young_adult_spend,
-        SUM(CASE WHEN age BETWEEN 35 AND 44 THEN total_amount ELSE 0 END) AS total_midage_adult_spend,
-        SUM(CASE WHEN age BETWEEN 45 AND 54 THEN total_amount ELSE 0 END) AS total_matureadult_spend,
-        SUM(CASE WHEN age>=55 THEN total_amount ELSE 0 END) AS total_senior_spend,
-        SUM(total_amount) AS total_spend
-    FROM
-        retail_sales
-    GROUP BY
-        gender
-)
-SELECT
-    gender,
-    ROUND(total_teen_spend*100/total_spend,2) AS teen_pct,
-    ROUND(total_young_adult_spend*100/total_spend,2) AS adult_pct,
-    ROUND(total_midage_adult_spend*100/total_spend,2) AS midage_adult_pct,
-    ROUND(total_matureadult_spend*100/total_spend,2) AS mature_adult_pct,
-    ROUND(total_senior_spend*100/total_spend,2) AS senior_pct
-FROM 
-    customer_spend
-```
+[view sql query](/sql_files/4_Customer_Segmentation_and_CRM.sql)
+![view customer segement revenue](/Which%20Customer%20Segment%20Contribute%20The%20Most%20Revenue.png)
+
+
 
 #### Insights
 
