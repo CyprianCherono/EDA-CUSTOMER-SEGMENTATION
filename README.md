@@ -69,7 +69,7 @@ To determine which product categories hold the highest appeal among customers, I
 
 [view sql query](/sql_files/2_Product_Sales_Performance.sql)
 
-[Popular Product Category](/Which%20Product%20Category%20Has%20The%20Highest%20Appeal%20Among%20Customers.jpg)
+![Popular Product Category](/Which%20Product%20Category%20Has%20The%20Highest%20Appeal%20Among%20Customers.jpg)
 
 
 #### Insights
